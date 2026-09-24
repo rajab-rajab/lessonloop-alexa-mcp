@@ -56,6 +56,8 @@ try {
   const lessons = await api('/api/lessons');
   for (const lesson of lessons) { const option = document.createElement('option'); option.value = lesson.id; option.textContent = `${lesson.title} · ${lesson.level}`; $('lesson').append(option); }
   await refreshHistory();
+  const features = await api('/api/features');
+  $('coach').hidden = !features.bedrock;
 } catch (error) { showError(error); }
 $('start').addEventListener('click', async () => {
   try {
@@ -72,6 +74,15 @@ $('answerForm').addEventListener('submit', async event => {
 $('hint').addEventListener('click', async () => {
   if (!sessionId) return;
   try { const data = await api(`/api/sessions/${sessionId}/hint`, 'POST'); message('LESSONLOOP', data.speech); render(data.session); } catch (error) { showError(error); }
+});
+$('coach').addEventListener('click', async () => {
+  if (!sessionId) return;
+  const answer = $('answer').value.trim();
+  if (!answer) { message('LESSONLOOP', 'Type your answer before asking the AWS coach.'); return; }
+  $('coach').disabled = true;
+  try { const data = await api(`/api/sessions/${sessionId}/coach`, 'POST', { answer }); message('AWS COACH', data.speech); }
+  catch (error) { showError(error); }
+  finally { $('coach').disabled = false; }
 });
 $('speak').addEventListener('click', () => {
   if (!('speechSynthesis' in window)) return message('LESSONLOOP', 'Your browser does not support speech playback.');
