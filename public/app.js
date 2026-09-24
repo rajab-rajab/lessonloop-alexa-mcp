@@ -58,6 +58,7 @@ try {
   await refreshHistory();
   const features = await api('/api/features');
   $('coach').hidden = !features.bedrock;
+  $('s3export').hidden = !features.s3;
 } catch (error) { showError(error); }
 $('start').addEventListener('click', async () => {
   try {
@@ -83,6 +84,13 @@ $('coach').addEventListener('click', async () => {
   try { const data = await api(`/api/sessions/${sessionId}/coach`, 'POST', { answer }); message('AWS COACH', data.speech); }
   catch (error) { showError(error); }
   finally { $('coach').disabled = false; }
+});
+$('s3export').addEventListener('click', async () => {
+  $('s3export').disabled = true;
+  $('s3status').textContent = 'Saving anonymous progress summary…';
+  try { const result = await api('/api/exports/s3', 'POST'); $('s3status').textContent = `Saved ${result.totals.sessions} sessions to AWS S3: ${result.key}`; }
+  catch (error) { $('s3status').textContent = error.message; }
+  finally { $('s3export').disabled = false; }
 });
 $('speak').addEventListener('click', () => {
   if (!('speechSynthesis' in window)) return message('LESSONLOOP', 'Your browser does not support speech playback.');
