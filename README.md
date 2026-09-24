@@ -13,8 +13,9 @@ LessonLoop is an education prototype for the [Build, Ship, Shape: Amazon Develop
 - A teacher summary with learning goal, attempts, hints used, status, and next step.
 - Saved sessions that remain available after a server restart.
 - Browser speech playback and optional speech input where supported; typing always works.
-- Six MCP tools operating on the same sessions as the browser (five work without AWS).
+- Seven MCP tools operating on the same sessions as the browser (five work without AWS).
 - Optional Amazon Bedrock coaching through the Converse API, available in both the browser and MCP.
+- Optional Amazon S3 export of anonymous teacher progress totals, available through an explicit browser button or MCP tool.
 
 ## Requirements and quick start
 
@@ -60,6 +61,7 @@ The local endpoint uses JSON-RPC over Streamable HTTP POST and advertises MCP pr
 | `submit_answer` | Check an answer and update progress | `sessionId`, `answer` |
 | `get_progress` | Read the session and teacher summary | `sessionId` |
 | `explain_with_bedrock` | Optional Amazon Bedrock explanation | `sessionId`, `answer` |
+| `export_progress_to_s3` | Optional anonymous teacher summary upload to Amazon S3 | None |
 
 ### Check the MCP endpoint in PowerShell
 
@@ -116,6 +118,29 @@ Your AWS identity needs `bedrock:InvokeModel` permission for the selected model 
 
 The included unit test replaces the SDK with a simulated response and verifies the Converse request. **A live AWS invocation has not been verified in this repository's test environment.** For an AWS Builder submission, configure your own AWS account, run a real call, and record that result in an updated demonstration.
 
+### Alternative AWS integration: Amazon S3 progress summary
+
+Some AWS accounts have a zero daily Bedrock model token quota. LessonLoop can also save an **anonymous aggregate progress report** to a private Amazon S3 bucket. It contains only totals by Python topic (sessions, completions, attempts, and hints); it excludes learner names, session IDs, and answers. Nothing uploads automatically: a teacher must select **Save anonymous summary to AWS S3**, or an MCP client must explicitly call `export_progress_to_s3`.
+
+To try it in PowerShell with your signed-in AWS CLI, create a unique bucket in the same Region and install the S3 SDK:
+
+```powershell
+$bucket = "lessonloop-rajab-$(Get-Random -Maximum 99999999)"
+aws s3api create-bucket --bucket $bucket --region us-east-1
+npm install @aws-sdk/client-s3
+$env:AWS_REGION = 'us-east-1'
+$env:LESSONLOOP_S3_BUCKET = $bucket
+npm start
+```
+
+Your AWS identity needs `s3:PutObject` for the bucket (and permission to create it for the command above). Keep the bucket private; do not put real learner data in the prototype. Start a sample lesson, complete it, then select the S3 button in the teacher panel. The app reports the object key only after `S3Client.send(new PutObjectCommand(...))` succeeds. Verify the uploaded object with the returned key:
+
+```powershell
+aws s3api head-object --bucket $bucket --key '<key-shown-in-app>' --region us-east-1
+```
+
+The S3 unit test verifies the upload request and privacy fields with a simulated SDK response. **A live S3 upload must still be verified in your AWS account and shown in a new AWS Builder demo.** S3 storage and requests may incur AWS charges.
+
 ## Project structure
 
 | Path | Role |
@@ -123,6 +148,7 @@ The included unit test replaces the SDK with a simulated response and verifies t
 | [`server.mjs`](server.mjs) | HTTP server, browser API, MCP endpoint, session persistence |
 | [`mcp.mjs`](mcp.mjs) | Tool definitions and JSON-RPC response helpers |
 | [`bedrock.mjs`](bedrock.mjs) | Optional AWS Bedrock Converse integration |
+| [`s3-report.mjs`](s3-report.mjs) | Optional anonymous teacher report upload to Amazon S3 |
 | [`curriculum.mjs`](curriculum.mjs) | Lessons and expected-answer checking |
 | [`public/`](public/) | Learner and teacher interface with browser speech controls |
 | [`test/`](test/) | Workflow, persistence, MCP, and origin checks |
