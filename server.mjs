@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { lessons, grade } from './curriculum.mjs';
 import { protocolVersion, tools, mcpResponse, mcpError, toolResult } from './mcp.mjs';
+import { explainWithBedrock } from './bedrock.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -111,12 +112,16 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
             case 'get_hint': result = hint(args.sessionId); break;
             case 'submit_answer': result = answer(args.sessionId, args.answer); break;
             case 'get_progress': { const session = findSession(args.sessionId); result = { session: summary(session), question: lessons[session.lessonIndex].question }; break; }
+            case 'explain_with_bedrock': { const session = findSession(args.sessionId); result = await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: args.answer }); break; }
           }
           return send(res, 200, mcpResponse(rpc.id, toolResult(result)));
         } catch (error) { return send(res, 200, mcpResponse(rpc.id, toolResult({ error: error.message }, true))); }
       }
       if (req.method === 'GET' && url.pathname === '/api/lessons') {
         return send(res, 200, lessons.map(({ id, title, level, objective }) => ({ id, title, level, objective })));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/features') {
+        return send(res, 200, { bedrock: Boolean(process.env.AWS_REGION && process.env.LESSONLOOP_BEDROCK_MODEL_ID) });
       }
       if (req.method === 'GET' && url.pathname === '/api/sessions') {
         return send(res, 200, [...sessions.values()].map(summary));
@@ -140,6 +145,15 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
           if (!String(input.answer || '').trim()) return send(res, 400, { error: 'Enter an answer first.' });
           return send(res, 200, answer(session.id, input.answer));
         }
+      }
+      const coachMatch = url.pathname.match(/^\/api\/sessions\/([0-9a-f-]+)\/coach$/);
+      if (req.method === 'POST' && coachMatch) {
+        const session = sessions.get(coachMatch[1]);
+        if (!session) return send(res, 404, { error: 'Session not found. Start a new lesson.' });
+        const input = await body(req);
+        if (!String(input.answer || '').trim()) return send(res, 400, { error: 'Enter an answer first.' });
+        try { return send(res, 200, await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: input.answer })); }
+        catch (error) { return send(res, 503, { error: `AWS coaching unavailable: ${error.message}` }); }
       }
       if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/app.js' || url.pathname === '/style.css')) {
         const filename = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
