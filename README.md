@@ -13,7 +13,8 @@ LessonLoop is an education prototype for the [Build, Ship, Shape: Amazon Develop
 - A teacher summary with learning goal, attempts, hints used, status, and next step.
 - Saved sessions that remain available after a server restart.
 - Browser speech playback and optional speech input where supported; typing always works.
-- Five MCP tools operating on the same sessions as the browser.
+- Six MCP tools operating on the same sessions as the browser (five work without AWS).
+- Optional Amazon Bedrock coaching through the Converse API, available in both the browser and MCP.
 
 ## Requirements and quick start
 
@@ -49,7 +50,7 @@ The other sample answers are `cool` for decisions and `3` for loops. The content
 
 ## MCP server
 
-The local endpoint uses JSON-RPC over Streamable HTTP POST and advertises MCP protocol version `2025-11-25` with a tools capability. It returns JSON responses. An independent client built with the official TypeScript MCP SDK **1.30.1** connected, discovered all five tools, and completed a lesson locally.
+The local endpoint uses JSON-RPC over Streamable HTTP POST and advertises MCP protocol version `2025-11-25` with a tools capability. It returns JSON responses. An independent client built with the official TypeScript MCP SDK **1.30.1** connected, discovered all five original tools, and completed a lesson locally.
 
 | Tool | Purpose | Inputs |
 | --- | --- | --- |
@@ -58,6 +59,7 @@ The local endpoint uses JSON-RPC over Streamable HTTP POST and advertises MCP pr
 | `get_hint` | Return the next hint | `sessionId` |
 | `submit_answer` | Check an answer and update progress | `sessionId`, `answer` |
 | `get_progress` | Read the session and teacher summary | `sessionId` |
+| `explain_with_bedrock` | Optional Amazon Bedrock explanation | `sessionId`, `answer` |
 
 ### Check the MCP endpoint in PowerShell
 
@@ -97,12 +99,30 @@ $list = @{ jsonrpc = '2.0'; id = 2; method = 'tools/list'; params = @{} } |
 
 A session created through an MCP tool appears under **Saved sessions** after refreshing the browser. The independent SDK verification report is available in the project materials; it is not yet part of this GitHub repository.
 
+## Optional AWS Builder integration: Amazon Bedrock
+
+The sixth MCP tool, `explain_with_bedrock`, and the **Ask AWS coach** button invoke Amazon Bedrock's Converse API through the official AWS SDK for JavaScript v3. The feature sends the lesson objective, question, authored expected answer and explanation, and the answer typed by the learner. It does not send the learner name, session ID, or saved progress. The generated explanation is shown alongside the original deterministic answer check; it does not change grades.
+
+To enable this optional feature, configure AWS credentials using the standard AWS SDK credential chain, choose a Bedrock model accessible to your account in the selected Region, and run:
+
+```powershell
+npm install @aws-sdk/client-bedrock-runtime
+$env:AWS_REGION = 'us-east-1'
+$env:LESSONLOOP_BEDROCK_MODEL_ID = '<your-enabled-model-id-or-inference-profile>'
+npm start
+```
+
+Your AWS identity needs `bedrock:InvokeModel` permission for the selected model or inference profile. The SDK calls `BedrockRuntimeClient.send(new ConverseCommand(...))` in [`bedrock.mjs`](bedrock.mjs). Choose a model that supports Converse; AWS model access and charges depend on your account and Region. With no AWS configuration, the base app and its five original tools continue working and the coaching button stays hidden. If AWS is configured but a call fails, the app reports an error rather than presenting a fabricated AWS response. Do not send real student data to a model without the appropriate consent and review.
+
+The included unit test replaces the SDK with a simulated response and verifies the Converse request. **A live AWS invocation has not been verified in this repository's test environment.** For an AWS Builder submission, configure your own AWS account, run a real call, and record that result in an updated demonstration.
+
 ## Project structure
 
 | Path | Role |
 | --- | --- |
 | [`server.mjs`](server.mjs) | HTTP server, browser API, MCP endpoint, session persistence |
 | [`mcp.mjs`](mcp.mjs) | Tool definitions and JSON-RPC response helpers |
+| [`bedrock.mjs`](bedrock.mjs) | Optional AWS Bedrock Converse integration |
 | [`curriculum.mjs`](curriculum.mjs) | Lessons and expected-answer checking |
 | [`public/`](public/) | Learner and teacher interface with browser speech controls |
 | [`test/`](test/) | Workflow, persistence, MCP, and origin checks |
@@ -133,7 +153,7 @@ Separately, the official TypeScript MCP SDK `Client` and `StreamableHTTPClientTr
 
 **Watch the narrated demo:** [LessonLoop: Guided Python Practice, Teacher Progress Tracking & MCP Tools](https://youtu.be/PAUA3DM8F9I) (2 minutes 58 seconds).
 
-The demo shows the learner interface, guided hints and answer feedback, the teacher progress summary, and the local MCP status page. LessonLoop is an **Alexa+ concept**; it does not connect to an Alexa account or device. Follow the [official event rules](https://amazonappdev2026.devpost.com/rules) for final access, video, feedback, and submission requirements.
+The video demonstrates the original local workflow. It does **not** demonstrate a live Amazon Bedrock invocation. Present Alexa+ as a **concept** unless an actual integration has been tested. Follow the [official event rules](https://amazonappdev2026.devpost.com/rules) for final access, video, feedback, and submission requirements.
 
 ## License
 
