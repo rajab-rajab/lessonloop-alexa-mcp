@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { lessons, grade } from './curriculum.mjs';
 import { protocolVersion, tools, mcpResponse, mcpError, toolResult } from './mcp.mjs';
 import { explainWithBedrock } from './bedrock.mjs';
+import { exportProgressToS3 } from './s3-report.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -113,6 +114,7 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
             case 'submit_answer': result = answer(args.sessionId, args.answer); break;
             case 'get_progress': { const session = findSession(args.sessionId); result = { session: summary(session), question: lessons[session.lessonIndex].question }; break; }
             case 'explain_with_bedrock': { const session = findSession(args.sessionId); result = await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: args.answer }); break; }
+            case 'export_progress_to_s3': result = await exportProgressToS3({ sessions: [...sessions.values()] }); break;
           }
           return send(res, 200, mcpResponse(rpc.id, toolResult(result)));
         } catch (error) { return send(res, 200, mcpResponse(rpc.id, toolResult({ error: error.message }, true))); }
@@ -121,7 +123,7 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
         return send(res, 200, lessons.map(({ id, title, level, objective }) => ({ id, title, level, objective })));
       }
       if (req.method === 'GET' && url.pathname === '/api/features') {
-        return send(res, 200, { bedrock: Boolean(process.env.AWS_REGION && process.env.LESSONLOOP_BEDROCK_MODEL_ID) });
+        return send(res, 200, { bedrock: Boolean(process.env.AWS_REGION && process.env.LESSONLOOP_BEDROCK_MODEL_ID), s3: Boolean(process.env.AWS_REGION && process.env.LESSONLOOP_S3_BUCKET) });
       }
       if (req.method === 'GET' && url.pathname === '/api/sessions') {
         return send(res, 200, [...sessions.values()].map(summary));
@@ -130,6 +132,10 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
         const input = await body(req);
         if (!lessons.some(lesson => lesson.id === input.lessonId)) return send(res, 400, { error: 'Choose a listed lesson.' });
         return send(res, 201, startLesson(input));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/exports/s3') {
+        try { return send(res, 200, await exportProgressToS3({ sessions: [...sessions.values()] })); }
+        catch (error) { return send(res, 503, { error: `S3 export unavailable: ${error.message}` }); }
       }
       const match = url.pathname.match(/^\/api\/sessions\/([0-9a-f-]+)(?:\/(answer|hint))?$/);
       if (match) {
