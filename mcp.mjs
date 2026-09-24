@@ -5,7 +5,8 @@ export const tools = [
   { name: 'start_lesson', description: 'Start one learner lesson and return its question. Creates local progress.', inputSchema: { type: 'object', properties: { learner: { type: 'string', description: 'A first name or pseudonym, maximum 40 characters.' }, lessonId: { type: 'string', enum: ['variables', 'conditionals', 'loops'] } }, required: ['lessonId'], additionalProperties: false } },
   { name: 'get_hint', description: 'Get the next hint for an existing lesson session.', inputSchema: { type: 'object', properties: { sessionId: { type: 'string' } }, required: ['sessionId'], additionalProperties: false } },
   { name: 'submit_answer', description: 'Submit a learner answer for checking and update progress.', inputSchema: { type: 'object', properties: { sessionId: { type: 'string' }, answer: { type: 'string', maxLength: 200 } }, required: ['sessionId', 'answer'], additionalProperties: false } },
-  { name: 'get_progress', description: 'Read one learner session and the teacher summary.', inputSchema: { type: 'object', properties: { sessionId: { type: 'string' } }, required: ['sessionId'], additionalProperties: false } }
+  { name: 'get_progress', description: 'Read one learner session and the teacher summary.', inputSchema: { type: 'object', properties: { sessionId: { type: 'string' } }, required: ['sessionId'], additionalProperties: false } },
+  { name: 'explain_with_bedrock', description: 'Optional AWS Bedrock coaching for an existing lesson session and answer. Requires AWS configuration; sends lesson facts and the answer, not the learner name.', inputSchema: { type: 'object', properties: { sessionId: { type: 'string' }, answer: { type: 'string', maxLength: 200 } }, required: ['sessionId', 'answer'], additionalProperties: false } }
 ];
 
 export function mcpResponse(id, result) { return { jsonrpc: '2.0', id, result }; }
