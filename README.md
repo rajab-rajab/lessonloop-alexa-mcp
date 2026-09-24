@@ -131,7 +131,9 @@ Separately, the official TypeScript MCP SDK `Client` and `StreamableHTTPClientTr
 
 ## Hackathon demo
 
-A video under three minutes can show a wrong answer and hint, the correct answer and teacher summary, MCP tool discovery and a tool call, and the same MCP-created result in the browser. Present Alexa+ as a **concept** unless an actual integration has been tested. Follow the [official event rules](https://amazonappdev2026.devpost.com/rules) for final access, video, feedback, and submission requirements.
+**Watch the narrated demo:** [LessonLoop: Guided Python Practice, Teacher Progress Tracking & MCP Tools](https://youtu.be/PAUA3DM8F9I) (2 minutes 58 seconds).
+
+The demo shows the learner interface, guided hints and answer feedback, the teacher progress summary, and the local MCP status page. LessonLoop is an **Alexa+ concept**; it does not connect to an Alexa account or device. Follow the [official event rules](https://amazonappdev2026.devpost.com/rules) for final access, video, feedback, and submission requirements.
 
 ## License
 
