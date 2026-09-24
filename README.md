@@ -1,50 +1,138 @@
-# LessonLoop v3
+# LessonLoop
 
-A focused education workflow for the **Build, Ship, Shape: Amazon Developer Hackathon**. A learner practices one Python concept, requests progressive hints, receives immediate feedback, and leaves a concise progress note for a teacher. The same workflow is available through a local MCP endpoint for compatible agents.
+**Guided Python practice with MCP tools and a teacher progress view.**
 
-## Run locally
+LessonLoop is an education prototype for the [Build, Ship, Shape: Amazon Developer Hackathon](https://amazonappdev2026.devpost.com/). A learner answers a Python question, requests hints, and receives an explanation. The teacher view shows attempts, hints, completion, and the suggested next topic. A local MCP server exposes the same workflow to compatible agents.
 
-Requires Node.js 20 or later. No packages or credentials are needed.
+> **Scope:** The browser experience is an Alexa+ concept simulation. The local MCP endpoint works, but the project does not connect to an Alexa+ account, service, or device. Answer checking is deterministic; no language model runs inside the app.
 
-```bash
+## Features
+
+- Three original lessons: Python variables, decisions, and loops.
+- One question per lesson, two progressive hints, retry feedback, and an explanation.
+- A teacher summary with learning goal, attempts, hints used, status, and next step.
+- Saved sessions that remain available after a server restart.
+- Browser speech playback and optional speech input where supported; typing always works.
+- Five MCP tools operating on the same sessions as the browser.
+
+## Requirements and quick start
+
+Requires Node.js **20 or later** and npm. The application uses Node.js built-in modules; `npm install` is not needed to run it.
+
+```powershell
+git clone https://github.com/rajab-rajab/lessonloop-alexa-mcp.git
+cd lessonloop-alexa-mcp
+npm test
 npm start
 ```
 
-Open `http://127.0.0.1:3000`. The Streamable HTTP MCP endpoint is `http://127.0.0.1:3000/mcp`. Run `npm test` for workflow and MCP checks. Set `PORT=3001` to choose another port.
+The repository is currently private, so cloning requires authorized GitHub access. You can also run the commands from an extracted project ZIP. Open **http://127.0.0.1:3000/** for the learner app and **http://127.0.0.1:3000/mcp** for the MCP status page. Stop the server with `Ctrl+C`.
 
-Opening `/mcp` in a browser shows a status page. A working MCP client sends JSON-RPC requests by HTTP POST; the browser address bar alone cannot exercise the MCP tools.
-
-## MCP tools
-
-The local endpoint supports protocol version `2025-11-25`, a JSON response to Streamable HTTP POST requests, and five tools: `list_lessons`, `start_lesson`, `get_hint`, `submit_answer`, and `get_progress`. A compatible MCP client can connect to `http://127.0.0.1:3000/mcp` while the server is running. A tool-created lesson appears in the browser's Saved sessions list after refreshing the page.
-
-Example request in PowerShell after starting the server:
+To change the port in PowerShell:
 
 ```powershell
-$headers = @{ Accept = 'application/json, text/event-stream'; 'MCP-Protocol-Version' = '2025-11-25' }
-$message = @{ jsonrpc = '2.0'; id = 1; method = 'initialize'; params = @{ protocolVersion = '2025-11-25'; capabilities = @{}; clientInfo = @{ name = 'manual-check'; version = '1.0' } } } | ConvertTo-Json -Depth 6
-Invoke-RestMethod -Uri 'http://127.0.0.1:3000/mcp' -Method Post -Headers $headers -ContentType 'application/json' -Body $message
+$env:PORT = '3001'
+npm start
 ```
 
-The server binds to `127.0.0.1` only and rejects foreign browser origins. It has no account authentication and must not be exposed to the public internet. It supports a focused subset of MCP, with JSON responses and no server push stream; the included tests exercise the supported handshake and tools. Further interoperability testing with the intended Alexa+ environment is still required.
+Opening `/mcp` in a browser shows a status page. MCP clients send HTTP POST requests to that URL.
 
-## Demo path
+## Try the learner workflow
 
-1. Enter a learner name and start **Python variables**.
-2. Request a hint; submit `4` to see the retry guidance.
-3. Submit `5` to complete the lesson; read the teacher summary.
-4. Start **Python decisions** and answer `cool`.
-5. Select **Read aloud** to hear the latest guidance if the browser supports speech synthesis.
+1. Enter a pseudonym and choose **Python variables**.
+2. Select **Start lesson**. Try `4` for retry guidance or select **Give me a hint**.
+3. Answer `5` to complete the lesson.
+4. Read the teacher summary and suggested next step, **Python decisions**.
+5. Restart the server and reopen the session under **Saved sessions**.
 
-## Architecture and boundaries
+The other sample answers are `cool` for decisions and `3` for loops. The content in [`curriculum.mjs`](curriculum.mjs) was written for this prototype; it is not an official textbook extract.
 
-- Node HTTP server serves the web interface and a small JSON API.
-- Original, locally defined lesson content supplies all answers and explanations. The answer checker handles concise expected responses; it is not an AI evaluator.
-- Sessions are saved locally in `data/sessions.json` and remain available after a restart. The file stays on the local machine; do not enter sensitive student information or deploy this prototype publicly without access controls.
-- The **Saved sessions** list restores earlier lessons. In supported browsers, **Speak answer** fills the answer field using browser speech recognition; review the transcript before pressing Check. Browser voice services may process audio according to their own policies.
-- This is an **Alexa+ concept with a local MCP server**. It does not claim a live Alexa+ integration, an Amazon account connection, or a working Amazon device demo. The MCP interface and browser demo are separate ways to drive the same lesson workflow.
-- Voice output uses the browser's speech synthesis; typed answers make the demo usable without a microphone.
+## MCP server
 
-## Development and submission
+The local endpoint uses JSON-RPC over Streamable HTTP POST and advertises MCP protocol version `2025-11-25` with a tools capability. It returns JSON responses. An independent client built with the official TypeScript MCP SDK **1.30.1** connected, discovered all five tools, and completed a lesson locally.
 
-The prototype is an initial build, not a finished Devpost submission. Before entering, improve the guided learning experience, test with intended users, document product feedback, and record a public English video shorter than three minutes. The GitHub repository must include the full source and setup instructions. Check the [official rules](https://amazonappdev2026.devpost.com/rules) for current requirements. A public repository also needs an open-source license; choose one with the project owner before publishing.
+| Tool | Purpose | Inputs |
+| --- | --- | --- |
+| `list_lessons` | List lesson IDs and learning goals | None |
+| `start_lesson` | Create a session and return its question | `lessonId`, optional `learner` |
+| `get_hint` | Return the next hint | `sessionId` |
+| `submit_answer` | Check an answer and update progress | `sessionId`, `answer` |
+| `get_progress` | Read the session and teacher summary | `sessionId` |
+
+### Check the MCP endpoint in PowerShell
+
+Keep `npm start` running and open a second PowerShell window:
+
+```powershell
+$uri = 'http://127.0.0.1:3000/mcp'
+$headers = @{
+  Accept = 'application/json, text/event-stream'
+  'MCP-Protocol-Version' = '2025-11-25'
+}
+$init = @{
+  jsonrpc = '2.0'
+  id = 1
+  method = 'initialize'
+  params = @{
+    protocolVersion = '2025-11-25'
+    capabilities = @{}
+    clientInfo = @{ name = 'powershell-check'; version = '1.0' }
+  }
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod -Uri $uri -Method Post -Headers $headers `
+  -ContentType 'application/json' -Body $init
+```
+
+Discover the tools:
+
+```powershell
+$list = @{ jsonrpc = '2.0'; id = 2; method = 'tools/list'; params = @{} } |
+  ConvertTo-Json -Depth 5
+
+(Invoke-RestMethod -Uri $uri -Method Post -Headers $headers `
+  -ContentType 'application/json' -Body $list).result.tools |
+  Select-Object name, description
+```
+
+A session created through an MCP tool appears under **Saved sessions** after refreshing the browser. The independent SDK verification report is available in the project materials; it is not yet part of this GitHub repository.
+
+## Project structure
+
+| Path | Role |
+| --- | --- |
+| [`server.mjs`](server.mjs) | HTTP server, browser API, MCP endpoint, session persistence |
+| [`mcp.mjs`](mcp.mjs) | Tool definitions and JSON-RPC response helpers |
+| [`curriculum.mjs`](curriculum.mjs) | Lessons and expected-answer checking |
+| [`public/`](public/) | Learner and teacher interface with browser speech controls |
+| [`test/`](test/) | Workflow, persistence, MCP, and origin checks |
+
+Sessions are saved to `data/sessions.json`. This directory is excluded by [`.gitignore`](.gitignore). Use pseudonyms; no real student data is needed.
+
+## Verification
+
+Run `npm test` for the local checks. They cover wrong and correct answers, hints, teacher progress, restart persistence, MCP initialization and tool calls, protocol-version handling, origin rejection, and browser status behavior.
+
+Separately, the official TypeScript MCP SDK `Client` and `StreamableHTTPClientTransport` connected to a fresh local server. The client called `start_lesson`, `get_hint`, `submit_answer`, and `get_progress`, ending with **Completed**, one hint, and one attempt. This proves interoperability with that client on localhost; it does **not** prove Alexa+ runtime integration.
+
+## Security and privacy
+
+- The server binds to `127.0.0.1` and rejects foreign browser origins at `/mcp`.
+- There are **no accounts or authentication**. Do not expose this server to the public internet or store real student information in its local sessions.
+- Browser speech recognition may use the browser vendor's service. Review its transcript before selecting **Check**.
+- MCP tools can update local sessions. Connect only a trusted client and review its actions.
+
+## Limitations
+
+- Three topics and one fixed question per topic; no evaluation of arbitrary Python code.
+- Deterministic matching rather than an AI-generated assessment.
+- JSON responses only; no MCP server push stream or public authentication.
+- Alexa+ account, device, and runtime compatibility remain unverified.
+
+## Hackathon demo
+
+A video under three minutes can show a wrong answer and hint, the correct answer and teacher summary, MCP tool discovery and a tool call, and the same MCP-created result in the browser. Present Alexa+ as a **concept** unless an actual integration has been tested. Follow the [official event rules](https://amazonappdev2026.devpost.com/rules) for final access, video, feedback, and submission requirements.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
