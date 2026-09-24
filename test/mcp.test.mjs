@@ -16,7 +16,7 @@ test('MCP initialization and a complete tutoring tool sequence', async () => {
   };
   try {
     assert.equal((await post('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'test', version: '1' } })).data.result.protocolVersion, '2025-11-25');
-    assert.equal((await post('tools/list')).data.result.tools.length, 5);
+    assert.equal((await post('tools/list')).data.result.tools.length, 6);
     const call = async (name, args) => {
       const result = (await post('tools/call', { name, arguments: args })).data.result;
       assert.equal(result.isError, false);
