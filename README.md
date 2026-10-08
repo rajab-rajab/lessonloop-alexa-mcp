@@ -17,7 +17,7 @@ LessonLoop is an education prototype for the [Build, Ship, Shape: Amazon Develop
 - Browser speech playback and optional speech input where supported; typing always works.
 - Eight MCP tools operating on the same sessions as the browser.
 - Optional Amazon Bedrock coaching through the Converse API.
-- Optional Amazon S3 export of anonymous aggregate teacher progress.
+- Amazon S3 export of anonymous aggregate teacher progress; the live MCP export path has been successfully verified.
 
 ## Requirements and quick start
 
@@ -107,24 +107,28 @@ The deterministic lesson engine still decides whether an answer is correct. Befo
 Configure an accessible Bedrock model and region:
 
 ```powershell
-$env:AWS_REGION = 'us-east-1'
+$env:AWS_REGION = 'ap-southeast-2'
 $env:LESSONLOOP_BEDROCK_MODEL_ID = '<your-enabled-model-or-inference-profile>'
 npm run verify:bedrock
 ```
 
-A Bedrock result should be described as live only when this command exits successfully and prints `"ok": true`.
+A live authenticated Nova Micro request reached Amazon Bedrock from the MCP tool, but the service returned a daily-token quota error. This proves the application path reaches Bedrock, but **does not** prove a successful model response. Only describe Bedrock coaching as successfully live-verified after an invocation returns real model output.
 
 ## Amazon S3 progress export
 
 LessonLoop can explicitly upload an **anonymous aggregate progress report** to a private S3 bucket. Reports contain totals by topic such as sessions, completions, attempts, and hints. They exclude learner names, session IDs, and answers.
 
 ```powershell
-$env:AWS_REGION = 'us-east-1'
+$env:AWS_REGION = 'ap-southeast-2'
 $env:LESSONLOOP_S3_BUCKET = '<your-private-bucket>'
 npm run verify:s3
 ```
 
-A successful live check prints the created object key plus an `aws s3api head-object` command for independent verification.
+### Verified live AWS result
+
+On October 8, 2026 UTC, the `export_progress_to_s3` MCP tool successfully uploaded an anonymous JSON progress report to Amazon S3 in `ap-southeast-2`. A separate AWS CLI `head-object` call confirmed that the object exists and reported `ContentType: application/json`, a content length of 1811 bytes, and server-side encryption `AES256`.
+
+The verified report contained aggregate totals only: 19 sessions, 13 completed, 17 attempts, and 7 hints. No learner names, session IDs, or answers were included in the exported report.
 
 ## Project structure
 
@@ -135,7 +139,7 @@ A successful live check prints the created object key plus an `aws s3api head-ob
 | `mcp.mjs` | MCP tool definitions and JSON-RPC helpers |
 | `curriculum.mjs` | Nine authored Python questions and deterministic grading |
 | `bedrock.mjs` | Optional Amazon Bedrock coaching |
-| `s3-report.mjs` | Optional anonymous Amazon S3 progress export |
+| `s3-report.mjs` | Anonymous Amazon S3 progress export |
 | `public/` | Learner and teacher interface |
 | `scripts/` | Live AWS verification helpers |
 | `test/` | Workflow, adaptation, MCP, Bedrock, S3, and persistence checks |
@@ -151,6 +155,8 @@ npm test
 ```
 
 The v0.4.0 local suite passes **9/9 tests**, covering adaptive advancement/reinforcement, workflow persistence, MCP initialization and recommendation behavior, Bedrock request construction and privacy, and S3 privacy behavior.
+
+Manual MCP verification also confirmed that all eight tools are advertised and that the adaptive recommendation changes from Starter to Practice when a learner completes a lesson with limited support.
 
 The repository also includes `mcp-client-verification.md` documenting an independent connection using the official TypeScript MCP SDK.
 
@@ -168,13 +174,13 @@ The repository also includes `mcp-client-verification.md` documenting an indepen
 - The prototype contains three Python topics and nine authored questions; it does not execute arbitrary Python code.
 - Grading uses deterministic expected-answer matching rather than an LLM.
 - Alexa+ account, device, and runtime compatibility remain unverified.
-- A successful Bedrock or S3 integration must not be claimed until the corresponding live verification command succeeds in the submitter's AWS account.
+- Bedrock live access has reached the service but remains quota-blocked; a successful model response has not yet been recorded.
 
 ## Hackathon demo
 
 **Narrated demo:** [LessonLoop: Guided Python Practice, Teacher Progress Tracking & MCP Tools](https://youtu.be/PAUA3DM8F9I) (2 minutes 58 seconds).
 
-The existing video demonstrates the original local workflow. The final submission demo should additionally show the v0.4.0 adaptive recommendation, MCP `recommend_next`, and any AWS operation only after successful live verification.
+The existing video demonstrates the original local workflow. The final submission demo should additionally show the v0.4.0 adaptive recommendation, MCP `recommend_next`, and the now-verified live S3 export. Do not present Bedrock coaching as a successful live model response unless a later invocation succeeds.
 
 See [`submission-evidence.md`](submission-evidence.md) and [`IMPLEMENTATION-REPORT.md`](IMPLEMENTATION-REPORT.md) for submission evidence and the v0.4.0 change summary.
 
