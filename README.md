@@ -28,7 +28,7 @@ npm test
 npm start
 ```
 
-The repository is currently private, so cloning requires authorized GitHub access. You can also run the commands from an extracted project ZIP. Open **http://127.0.0.1:3000/** for the learner app and **http://127.0.0.1:3000/mcp** for the MCP status page. Stop the server with `Ctrl+C`.
+The repository is public and can be cloned directly. Open **http://127.0.0.1:3000/** for the learner app and **http://127.0.0.1:3000/mcp** for the MCP status page. Stop the server with `Ctrl+C`.
 
 To change the port in PowerShell:
 
