@@ -11,9 +11,16 @@ import { exportProgressToS3 } from './s3-report.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '127.0.0.1';
+const publicDemo = process.env.LESSONLOOP_PUBLIC_DEMO === 'true';
+const mcpToken = process.env.LESSONLOOP_MCP_TOKEN;
 
 function send(res, code, data) {
-  res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.writeHead(code, {
+    'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer'
+  });
   res.end(JSON.stringify(data));
 }
 function summary(session) {
@@ -81,6 +88,9 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
     const url = new URL(req.url, 'http://localhost');
     try {
       if (url.pathname === '/mcp') {
+        if (publicDemo && (!mcpToken || req.headers['x-lessonloop-mcp-token'] !== mcpToken)) {
+          return send(res, 401, mcpError(null, -32600, 'MCP authentication required'));
+        }
         const origin = req.headers.origin;
         if (origin && !['http://localhost:' + req.socket.localPort, 'http://127.0.0.1:' + req.socket.localPort].includes(origin)) return send(res, 403, mcpError(null, -32600, 'Forbidden origin'));
         if (req.method === 'GET') {
@@ -125,8 +135,11 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
       if (req.method === 'GET' && url.pathname === '/api/features') {
         return send(res, 200, { bedrock: Boolean(process.env.AWS_REGION && process.env.LESSONLOOP_BEDROCK_MODEL_ID), s3: Boolean(process.env.AWS_REGION && process.env.LESSONLOOP_S3_BUCKET) });
       }
+      if (req.method === 'GET' && url.pathname === '/healthz') {
+        return send(res, 200, { ok: true, service: 'lessonloop' });
+      }
       if (req.method === 'GET' && url.pathname === '/api/sessions') {
-        return send(res, 200, [...sessions.values()].map(summary));
+        return send(res, 200, publicDemo ? [] : [...sessions.values()].map(summary));
       }
       if (req.method === 'POST' && url.pathname === '/api/sessions') {
         const input = await body(req);
@@ -164,7 +177,7 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
       if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/app.js' || url.pathname === '/style.css')) {
         const filename = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
         const type = filename.endsWith('.js') ? 'text/javascript' : filename.endsWith('.css') ? 'text/css' : 'text/html';
-        res.writeHead(200, { 'content-type': `${type}; charset=utf-8` });
+        res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' });
         return res.end(await readFile(join(root, 'public', filename)));
       }
       send(res, 404, { error: 'Not found' });
@@ -173,5 +186,5 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === fileURLToPath(new URL(`file://${process.argv[1]}`))) {
-  createServer().listen(port, '127.0.0.1', () => console.log(`LessonLoop: http://127.0.0.1:${port}`));
+  createServer().listen(port, host, () => console.log(`LessonLoop: http://${host}:${port}`));
 }

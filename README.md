@@ -181,6 +181,10 @@ Separately, the official TypeScript MCP SDK `Client` and `StreamableHTTPClientTr
 
 The video demonstrates the original local workflow. It does **not** demonstrate a live Amazon Bedrock invocation. Present Alexa+ as a **concept** unless an actual integration has been tested. Follow the [official event rules](https://amazonappdev2026.devpost.com/rules) for final access, video, feedback, and submission requirements.
 
+## Submission evidence
+
+The repository contains a Streamable HTTP MCP server using protocol version `2025-11-25`, a browser-based Alexa+ concept simulation, and automated tests for the end-to-end tutoring flow. The Amazon Bedrock and Amazon S3 integrations are implemented and tested with simulated SDK clients, but they must not be represented as live AWS integrations until a real invocation has been recorded. See [`submission-evidence.md`](submission-evidence.md) for the final-submission checklist, product-feedback draft, and friction-log format.
+
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).

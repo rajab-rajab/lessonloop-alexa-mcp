@@ -1,0 +1,19 @@
+[Unit]
+Description=LessonLoop live demo
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lessonloop
+Environment=HOST=0.0.0.0
+Environment=PORT=80
+Environment=AWS_REGION=ap-southeast-2
+Environment=LESSONLOOP_BEDROCK_MODEL_ID=amazon.nova-micro-v1:0
+Environment=LESSONLOOP_PUBLIC_DEMO=true
+Environment=LESSONLOOP_DATA_FILE=/var/lib/lessonloop/sessions.json
+ExecStart=/usr/bin/node /opt/lessonloop/server.mjs
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

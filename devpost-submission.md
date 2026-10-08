@@ -4,7 +4,7 @@ LessonLoop — A Teaching Companion for Python Practice
 
 ## One-line Summary
 
-A local MCP-powered lesson workflow that gives students short Python exercises and progressive hints while keeping a simple progress note for teachers.
+A working lesson workflow that gives students short Python exercises and progressive hints while giving teachers an actionable view of progress. It includes a Streamable HTTP MCP server and a browser-based Alexa+ concept simulation.
 
 ## Problem
 
@@ -20,7 +20,7 @@ The prototype shows how a small, explicit teaching workflow can connect a conver
 
 ## How We Used AI
 
-The runtime does **not** call a language model. It exposes five MCP tools so a compatible AI agent can choose when to start a lesson, request a hint, submit an answer, or inspect progress. Lesson wording and answer checks are authored locally and deterministic. The current browser experience simulates a voice-first Alexa+ concept, with optional browser speech input and playback. No live Alexa account or device is connected. Any future agent integration and its behavior must be demonstrated separately before making stronger AI claims.
+The deterministic core exposes five lesson-flow MCP tools so a compatible AI agent can start a lesson, request a hint, submit an answer, or inspect progress. Two optional AWS-backed tools add Amazon Bedrock coaching through the Converse API and anonymous aggregate progress export to Amazon S3. Their SDK interactions are covered by tests, but no live AWS invocation has yet been recorded. Lesson wording and answer checks are authored locally and deterministic. The browser experience simulates a voice-first Alexa+ concept with optional browser speech input and playback; no live Alexa+ account or device is connected.
 
 ## How We Used Codex
 
@@ -32,7 +32,8 @@ Codex created the Node.js server, original lesson content, responsive web interf
 - Progressive hints, answer checking, explanations, and a suggested next topic.
 - Saved local sessions and a teacher-facing progress summary.
 - Browser speech synthesis and optional speech recognition when supported.
-- Five MCP tools: `list_lessons`, `start_lesson`, `get_hint`, `submit_answer`, and `get_progress`.
+- Seven MCP tools: `list_lessons`, `start_lesson`, `get_hint`, `submit_answer`, `get_progress`, `explain_with_bedrock`, and `export_progress_to_s3`.
+- Optional Amazon Bedrock coaching and anonymous Amazon S3 progress-summary export, each enabled only by explicit configuration.
 - A browser-visible status page at `/mcp`, while the MCP client uses POST requests.
 
 ## Architecture
@@ -44,7 +45,7 @@ Node.js serves the web app and a JSON API on localhost. The MCP endpoint at `/mc
 1. Install Node.js 20 or newer, extract the project, run `npm test`, then run `npm start`.
 2. Open `http://127.0.0.1:3000/` and complete **Python variables** using answer `5`.
 3. Confirm the teacher summary says **Completed** and **1 attempt**. Restart the server, refresh, and reopen the saved session.
-4. Open `http://127.0.0.1:3000/mcp` to see the status page. Use a compatible MCP client with the endpoint URL or follow the PowerShell initialization example in the README. Discover the five tools and invoke `start_lesson` with `lessonId: variables` and a pseudonym.
+4. Open `http://127.0.0.1:3000/mcp` to see the status page. Use a compatible MCP client with the endpoint URL or follow the PowerShell initialization example in the README. Discover the available tools and invoke `start_lesson` with `lessonId: variables` and a pseudonym.
 5. Invoke `submit_answer` using the returned session ID and answer `5`. Refresh the web page; the MCP-created session appears in Saved sessions as **Completed**.
 6. Run the demo locally. The project has no public demo URL or public authentication; do not expose the local server on the public internet.
 
@@ -52,15 +53,17 @@ An independent `@modelcontextprotocol/sdk` 1.30.1 client successfully connected,
 
 ## Public Demo Link
 
-TODO: Add a public testing URL only if the project is securely hosted. A locally runnable repository and demonstration video are the intended test path for now.
+There is no public application URL. The app intentionally binds to localhost because it has no account system or public-facing authorization. A reviewer can run the project locally from this repository and follow the testing instructions above.
 
 ## Public Repository Link
 
-[GitHub: rajab-rajab/lessonloop-alexa-mcp](https://github.com/rajab-rajab/lessonloop-alexa-mcp) — currently **private**, at commit `9eb81f6` on `main`, with an Apache License 2.0 file. The repository has the application source and tests. Reviewer access has not been confirmed. The screenshot and this draft have not yet been pushed to the repository. Keep `data/`, credentials, and student information out of Git.
+[GitHub: rajab-rajab/lessonloop-alexa-mcp](https://github.com/rajab-rajab/lessonloop-alexa-mcp) — **public** and licensed under Apache License 2.0. It contains the application source, test suite, MCP verification instructions, and the recorded demo link. Keep `data/`, credentials, and student information out of Git.
 
 ## Demo Video
 
-TODO: Record a public English YouTube or Vimeo video **under three minutes**. Proposed sequence: 0:00 problem and goal; 0:20 browser lesson with a wrong answer, hint, and correct answer; 1:10 teacher progress; 1:35 MCP initialization/tool discovery and `start_lesson`/`submit_answer` via a compatible client or PowerShell; 2:15 browser refresh showing the same MCP-created result; 2:35 limitations and closing. Display the running app and MCP calls clearly. Do not depict a real Alexa+ integration.
+**Public video:** [LessonLoop: Guided Python Practice, Teacher Progress Tracking & MCP Tools](https://youtu.be/PAUA3DM8F9I) (2 minutes 58 seconds, English).
+
+The current video demonstrates the original local workflow. Before final submission, replace or supplement it with a version that visibly shows MCP initialization/tool discovery, a tool call such as `start_lesson`, and the resulting session in the teacher view. Show a live Bedrock interaction only after it has actually succeeded, and continue to label the browser experience as an Alexa+ concept simulation.
 
 ## Screenshot Shot List
 
@@ -74,7 +77,7 @@ TODO: Record a public English YouTube or Vimeo video **under three minutes**. Pr
 
 ## Submission Readiness Notes
 
-The project runs on the owner's Windows machine. The owner reported successful browser use, MCP initialization, five-tool listing, a tool-created variables lesson, answer submission, and the same completed result in the web view. The pasted console output and the supplied screenshot support these observations; the screenshot was copied into `public/screenshots/01-mcp-completed-lesson.jpeg` in the prepared package, but is not yet in GitHub. The local automated checks pass. An independent official TypeScript MCP SDK client also connected and completed the lesson workflow on a fresh local server; see `mcp-client-verification.md`. The repository and Apache License 2.0 file are verified. The draft is not ready for final entry: reviewer access for the private repository, public demo video, additional screenshots, product feedback, and an Alexa+ environment test or a clearly labeled simulation remain open.
+The project runs on the owner's Windows machine. Its local automated suite passes the tutoring workflow, MCP sequence, Bedrock privacy contract, and S3 privacy contract. An independent official TypeScript MCP SDK client also connected and completed the lesson workflow on a fresh local server; see `mcp-client-verification.md`. The repository is public and Apache-licensed, and the public video is under the three-minute limit. Remaining evidence gaps are a clearly recorded MCP sequence in the final video, live verification of any AWS feature claimed for the AWS Builder mini challenge, final product feedback, and either an Alexa+ environment test or the existing explicit simulation label.
 
 ## Known Limitations
 
@@ -93,7 +96,7 @@ The project runs on the owner's Windows machine. The owner reported successful b
 - **Canadian province:** Use `N/A` if no team member resides in Canada, after confirmation.
 - **Primary Track:** Alexa+ is the intended track. Validate the MCP server against an independent client and current official track requirements.
 - **New or existing before August 31, 2026:** New project created during the hackathon period; verify before final entry.
-- **AWS Builder Mini Challenge:** No AWS service is in the current build; select No unless the project changes. Do not claim AWS integration merely because it uses MCP.
+- **AWS Builder Mini Challenge:** The source includes Amazon Bedrock Converse and Amazon S3 integrations. Enter only after a real invocation is captured and the final materials identify the service, purpose, and privacy behavior.
 - **Open Source Mini Challenge:** Do not assume this primary project alone qualifies. The official rules ask for an additional open-source project or contribution, its URL, the project repository URL, GitHub username, and a description. Decide after making a qualifying contribution.
 - **Product Feedback Q1 (tools used):** MCP specification, Node.js built-ins, browser speech APIs, and Codex. Describe their concrete roles; distinguish sponsor developer tools from general tooling.
 - **Product Feedback Q2 (worked well):** Draft from observed setup and PowerShell test; confirm with owner before final entry.
@@ -102,8 +105,8 @@ The project runs on the owner's Windows machine. The owner reported successful b
 - **Product Feedback Q5 (build again):** Ask owner for an honest yes/no and reason after testing an independent MCP client.
 - **Eligibility declarations:** Owner must personally confirm age, jurisdiction, and no disqualifying employment or conflict.
 - **Optional friction log:** Record specific attempted task, steps, expected versus actual result, severity, workaround, and suggested fix if submitting one.
-- **GitHub URL:** https://github.com/rajab-rajab/lessonloop-alexa-mcp (private; commit `9eb81f6`).
+- **GitHub URL:** https://github.com/rajab-rajab/lessonloop-alexa-mcp (public).
 - **License:** Apache License 2.0 exists in the repository.
-- **Video URL, additional screenshots, and reviewer access:** Pending. One screenshot is included in the prepared package, not yet on GitHub.
+- **Video URL:** https://youtu.be/PAUA3DM8F9I. Capture updated screenshots and an MCP-tool-call segment for the final cut.
 
 Official rules and form: https://amazonappdev2026.devpost.com/rules

@@ -11,7 +11,12 @@ export async function explainWithBedrock({ lessonId, answer, modelId = process.e
   let sdk;
   try { sdk = await sdkLoader(); }
   catch { throw new Error('Install the optional AWS SDK: npm install @aws-sdk/client-bedrock-runtime'); }
-  const client = new sdk.BedrockRuntimeClient({ region });
+  // Keep a brief live coaching request resilient to transient Bedrock throttling.
+  const client = new sdk.BedrockRuntimeClient({
+    region,
+    maxAttempts: 5,
+    retryMode: 'adaptive'
+  });
   try {
     const result = await client.send(new sdk.ConverseCommand({
       modelId,
