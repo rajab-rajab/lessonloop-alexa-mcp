@@ -16,7 +16,7 @@ test('learner retry, hints, and teacher progress stay in sync', async () => {
     return { status: res.status, data: await res.json() };
   };
   try {
-    assert.equal((await call('/api/lessons')).data.length, 3);
+    assert.equal((await call('/api/lessons')).data.length, 9);
     const created = await call('/api/sessions', { learner: 'Ayesha', lessonId: 'variables' });
     assert.equal(created.status, 201);
     const id = created.data.session.id;
@@ -27,7 +27,8 @@ test('learner retry, hints, and teacher progress stay in sync', async () => {
     const right = await call(`/api/sessions/${id}/answer`, { answer: '5' });
     assert.equal(right.data.session.status, 'Completed');
     assert.equal(right.data.session.attempts, 2);
-    assert.equal(right.data.session.nextStep, 'Python decisions');
+    assert.equal(right.data.session.mastery, 'Developing');
+    assert.equal(right.data.session.nextStep, 'Python variables · Practice');
     const reloaded = await call(`/api/sessions/${id}`);
     assert.equal(reloaded.data.session.correct, true);
     assert.equal((await call('/api/sessions')).data.length, 1);

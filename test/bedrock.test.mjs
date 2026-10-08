@@ -12,10 +12,12 @@ test('AWS coaching sends lesson facts and answer through Converse without learne
       destroy() {}
     }
   });
-  const result = await explainWithBedrock({ lessonId: 'variables', answer: '4', region: 'us-east-1', modelId: 'test-model', sdkLoader });
+  const result = await explainWithBedrock({ lessonId: 'variables', answer: '4', attempts: 2, hints: 1, mastery: 'Developing', completed: false, region: 'us-east-1', modelId: 'test-model', sdkLoader });
   assert.equal(result.speech, 'Start at three, then add two.');
   assert.equal(command.modelId, 'test-model');
   assert.match(command.messages[0].content[0].text, /learnerAnswer.*4/);
+  assert.match(command.messages[0].content[0].text, /attempts.*2/);
+  assert.match(command.system[0].text, /do not reveal the final answer/i);
   assert.doesNotMatch(command.messages[0].content[0].text, /learnerName|sessionId/);
 });
 

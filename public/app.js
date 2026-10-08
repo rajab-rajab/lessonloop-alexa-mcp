@@ -20,7 +20,7 @@ function message(speaker, speech, student = false) {
   if (!student) lastSpeech = speech;
 }
 function render(s) {
-  const fields = [['Learner', s.learner], ['Lesson', s.lessonTitle], ['Attempts', s.attempts], ['Hints used', s.hints], ['Learning goal', s.objective], ['Suggested next step', s.nextStep]];
+  const fields = [['Learner', s.learner], ['Lesson', s.lessonTitle], ['Mastery', s.mastery], ['Attempts', s.attempts], ['Hints used', s.hints], ['Learning goal', s.objective], ['Suggested next step', s.nextStep], ['Why this next step', s.recommendationReason]];
   const box = $('summary'); box.replaceChildren();
   const tag = document.createElement('span'); tag.className = 'status'; tag.textContent = s.status;
   const dl = document.createElement('dl');

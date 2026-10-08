@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { lessons, grade } from './curriculum.mjs';
+import { masteryFor, recommendNext } from './adaptive.mjs';
 import { protocolVersion, tools, mcpResponse, mcpError, toolResult } from './mcp.mjs';
 import { explainWithBedrock } from './bedrock.mjs';
 import { exportProgressToS3 } from './s3-report.mjs';
@@ -25,11 +26,15 @@ function send(res, code, data) {
 }
 function summary(session) {
   const lesson = lessons[session.lessonIndex];
+  const recommendation = recommendNext(session);
   return { id: session.id, learner: session.learner, lessonId: lesson.id,
-    lessonTitle: lesson.title, objective: lesson.objective, source: lesson.source,
+    lessonTitle: lesson.title, topic: lesson.topic, level: lesson.level, objective: lesson.objective, source: lesson.source,
     attempts: session.attempts, hints: session.hints, correct: session.correct,
     status: session.correct ? 'Completed' : session.attempts ? 'Needs practice' : 'In progress',
-    nextStep: session.correct ? (lessons[session.lessonIndex + 1]?.title || 'Review the lessons') : 'Try another example with a hint' };
+    mastery: masteryFor(session), recommendationReason: recommendation.reason,
+    recommendedLessonId: recommendation.recommendedLessonId,
+    recommendedLessonTitle: recommendation.recommendedLessonTitle,
+    nextStep: recommendation.recommendedLessonTitle };
 }
 async function body(req) {
   let raw = '';
@@ -108,7 +113,7 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
         if (rpc.jsonrpc !== '2.0' || typeof rpc.method !== 'string' || Array.isArray(rpc)) return send(res, 400, mcpError(rpc.id ?? null, -32600, 'Invalid JSON-RPC request'));
         if (rpc.method !== 'initialize' && req.headers['mcp-protocol-version'] !== protocolVersion) return send(res, 400, mcpError(rpc.id ?? null, -32602, 'Unsupported protocol version'));
         if (!Object.hasOwn(rpc, 'id')) { res.writeHead(202); return res.end(); }
-        if (rpc.method === 'initialize') return send(res, 200, mcpResponse(rpc.id, { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'lessonloop', version: '0.3.0' }, instructions: 'Only locally defined lesson content is authoritative. Use start_lesson, get_hint, submit_answer, and get_progress to guide one learner. Ask the learner before recording a name or answer.' }));
+        if (rpc.method === 'initialize') return send(res, 200, mcpResponse(rpc.id, { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'lessonloop', version: '0.4.0' }, instructions: 'Only locally defined lesson content is authoritative. Use start_lesson, get_hint, submit_answer, get_progress, and recommend_next to guide one learner. Ask the learner before recording a name or answer.' }));
         if (rpc.method === 'ping') return send(res, 200, mcpResponse(rpc.id, {}));
         if (rpc.method === 'tools/list') return send(res, 200, mcpResponse(rpc.id, { tools }));
         if (rpc.method !== 'tools/call') return send(res, 200, mcpError(rpc.id, -32601, 'Method not found'));
@@ -123,7 +128,8 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
             case 'get_hint': result = hint(args.sessionId); break;
             case 'submit_answer': result = answer(args.sessionId, args.answer); break;
             case 'get_progress': { const session = findSession(args.sessionId); result = { session: summary(session), question: lessons[session.lessonIndex].question }; break; }
-            case 'explain_with_bedrock': { const session = findSession(args.sessionId); result = await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: args.answer }); break; }
+            case 'recommend_next': { const session = findSession(args.sessionId); result = recommendNext(session); break; }
+            case 'explain_with_bedrock': { const session = findSession(args.sessionId); result = await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: args.answer, attempts: session.attempts, hints: session.hints, mastery: masteryFor(session), completed: session.correct }); break; }
             case 'export_progress_to_s3': result = await exportProgressToS3({ sessions: [...sessions.values()] }); break;
           }
           return send(res, 200, mcpResponse(rpc.id, toolResult(result)));
@@ -171,7 +177,7 @@ export function createServer({ dataFile = process.env.LESSONLOOP_DATA_FILE || jo
         if (!session) return send(res, 404, { error: 'Session not found. Start a new lesson.' });
         const input = await body(req);
         if (!String(input.answer || '').trim()) return send(res, 400, { error: 'Enter an answer first.' });
-        try { return send(res, 200, await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: input.answer })); }
+        try { return send(res, 200, await explainWithBedrock({ lessonId: lessons[session.lessonIndex].id, answer: input.answer, attempts: session.attempts, hints: session.hints, mastery: masteryFor(session), completed: session.correct })); }
         catch (error) { return send(res, 503, { error: `AWS coaching unavailable: ${error.message}` }); }
       }
       if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/app.js' || url.pathname === '/style.css')) {
