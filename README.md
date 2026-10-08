@@ -130,6 +130,19 @@ On October 8, 2026 UTC, the `export_progress_to_s3` MCP tool successfully upload
 
 The verified report contained aggregate totals only: 19 sessions, 13 completed, 17 attempts, and 7 hints. No learner names, session IDs, or answers were included in the exported report.
 
+## Live EC2 demo deployment
+
+A public, demo-only LessonLoop instance is deployed in AWS `ap-southeast-2` for the hackathon review:
+
+- **Demo:** [http://13.237.82.135/](http://13.237.82.135/)
+- **Health check:** [http://13.237.82.135/healthz](http://13.237.82.135/healthz)
+- **Compute:** Amazon EC2 `t3.micro` running Amazon Linux 2023
+- **Stable address:** an Elastic IP is associated with the instance so the demo URL remains unchanged across stop/start operations.
+
+The `lessonloop.service` systemd unit runs the Node.js server on port 80 with `HOST=0.0.0.0`; the repository's default local configuration still binds to `127.0.0.1`. Administration uses AWS Systems Manager Session Manager with the instance role, so the demo does not require an SSH key pair or an inbound SSH rule. HTTP is the only public application port.
+
+This is a demonstration environment, not a production deployment. It has no user accounts or production authentication. Use only synthetic learner names and test data, and do not submit real student information through the public demo.
+
 ## Project structure
 
 | Path | Role |
